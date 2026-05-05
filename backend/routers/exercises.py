@@ -1,0 +1,93 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from database import get_db
+
+router = APIRouter()
+
+
+class ExerciseCreate(BaseModel):
+    name: str
+    muscle_group: str | None = None
+    equipment: str | None = None
+    description: str | None = None
+
+
+class ExerciseUpdate(BaseModel):
+    name: str | None = None
+    muscle_group: str | None = None
+    equipment: str | None = None
+    description: str | None = None
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
+def create_exercise(payload: ExerciseCreate, conn=Depends(get_db)):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO "Exercise" (name, muscle_group, equipment, description)
+            VALUES (%s, %s, %s, %s)
+            RETURNING exercise_id, name, muscle_group, equipment, description
+            """,
+            (payload.name, payload.muscle_group, payload.equipment, payload.description),
+        )
+        conn.commit()
+        return cur.fetchone()
+
+
+@router.get("/")
+def list_exercises(muscle_group: str | None = None, conn=Depends(get_db)):
+    with conn.cursor() as cur:
+        if muscle_group:
+            cur.execute(
+                'SELECT * FROM "Exercise" WHERE muscle_group ILIKE %s ORDER BY name',
+                (f"%{muscle_group}%",),
+            )
+        else:
+            cur.execute('SELECT * FROM "Exercise" ORDER BY name')
+        return cur.fetchall()
+
+
+@router.get("/{exercise_id}")
+def get_exercise(exercise_id: int, conn=Depends(get_db)):
+    with conn.cursor() as cur:
+        cur.execute('SELECT * FROM "Exercise" WHERE exercise_id = %s', (exercise_id,))
+        row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    return row
+
+
+@router.put("/{exercise_id}")
+def update_exercise(exercise_id: int, payload: ExerciseUpdate, conn=Depends(get_db)):
+    fields, values = [], []
+    for col, val in [
+        ("name", payload.name),
+        ("muscle_group", payload.muscle_group),
+        ("equipment", payload.equipment),
+        ("description", payload.description),
+    ]:
+        if val is not None:
+            fields.append(f"{col} = %s")
+            values.append(val)
+    if not fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    values.append(exercise_id)
+    with conn.cursor() as cur:
+        cur.execute(
+            f'UPDATE "Exercise" SET {", ".join(fields)} WHERE exercise_id = %s RETURNING *',
+            values,
+        )
+        conn.commit()
+        row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    return row
+
+
+@router.delete("/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_exercise(exercise_id: int, conn=Depends(get_db)):
+    with conn.cursor() as cur:
+        cur.execute('DELETE FROM "Exercise" WHERE exercise_id = %s RETURNING exercise_id', (exercise_id,))
+        conn.commit()
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Exercise not found")
