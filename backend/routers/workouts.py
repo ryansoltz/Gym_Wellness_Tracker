@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from datetime import date
@@ -11,44 +12,43 @@ router = APIRouter()
 class SessionCreate(BaseModel):
     user_id: int
     date: date
-    duration_minutes: int | None = None
-    notes: str | None = None
+    duration_min: Optional[int] = None
+    notes: Optional[str] = None
 
 
 class SessionUpdate(BaseModel):
-    date: date | None = None
-    duration_minutes: int | None = None
-    notes: str | None = None
+    date: Optional[date] = None
+    duration_min: Optional[int] = None
+    notes: Optional[str] = None
 
 
 class WorkoutExerciseCreate(BaseModel):
     session_id: int
     exercise_id: int
-    order_num: int | None = None
+    order_num: Optional[int] = 1
 
 
 class SetLogCreate(BaseModel):
-    workout_exercise_id: int
+    workout_ex_id: int
     set_number: int
-    weight_lbs: float
-    reps: int
-    rpe: float | None = None
+    reps: Optional[int] = None
+    weight_lbs: Optional[float] = None
+    duration_sec: Optional[int] = None
 
 
 class SetLogUpdate(BaseModel):
-    set_number: int | None = None
-    weight_lbs: float | None = None
-    reps: int | None = None
-    rpe: float | None = None
+    set_number: Optional[int] = None
+    reps: Optional[int] = None
+    weight_lbs: Optional[float] = None
+    duration_sec: Optional[int] = None
 
 
 # ── Helper: PR auto-detection ─────────────────────────────────────────────────
 
-def _check_and_insert_pr(cur, user_id: int, exercise_id: int, weight_lbs: float, reps: int, set_id: int):
-    """Insert a PersonalRecord row if this set beats the user's current best weight for the exercise."""
+def _check_and_insert_pr(cur, user_id: int, exercise_id: int, weight_lbs: float, reps: int):
     cur.execute(
         """
-        SELECT weight_lbs FROM "PersonalRecord"
+        SELECT weight_lbs FROM personalrecord
         WHERE user_id = %s AND exercise_id = %s
         ORDER BY weight_lbs DESC
         LIMIT 1
@@ -59,23 +59,22 @@ def _check_and_insert_pr(cur, user_id: int, exercise_id: int, weight_lbs: float,
     if existing is None or weight_lbs > existing["weight_lbs"]:
         cur.execute(
             """
-            INSERT INTO "PersonalRecord" (user_id, exercise_id, weight_lbs, reps, achieved_on, set_id)
-            VALUES (%s, %s, %s, %s, CURRENT_DATE, %s)
+            INSERT INTO personalrecord (user_id, exercise_id, weight_lbs, reps, achieved_date)
+            VALUES (%s, %s, %s, %s, CURRENT_DATE)
             """,
-            (user_id, exercise_id, weight_lbs, reps, set_id),
+            (user_id, exercise_id, weight_lbs, reps),
         )
 
 
-def _get_user_and_exercise_for_set(cur, workout_exercise_id: int):
-    """Resolve user_id and exercise_id from a workout_exercise_id."""
+def _get_user_and_exercise_for_set(cur, workout_ex_id: int):
     cur.execute(
         """
         SELECT ws.user_id, we.exercise_id
-        FROM "WorkoutExercise" we
-        JOIN "WorkoutSession" ws ON ws.session_id = we.session_id
-        WHERE we.workout_exercise_id = %s
+        FROM workoutexercise we
+        JOIN workoutsession ws ON ws.session_id = we.session_id
+        WHERE we.workout_ex_id = %s
         """,
-        (workout_exercise_id,),
+        (workout_ex_id,),
     )
     return cur.fetchone()
 
@@ -87,11 +86,11 @@ def create_session(payload: SessionCreate, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO "WorkoutSession" (user_id, date, duration_minutes, notes)
+            INSERT INTO workoutsession (user_id, date, duration_min, notes)
             VALUES (%s, %s, %s, %s)
             RETURNING *
             """,
-            (payload.user_id, payload.date, payload.duration_minutes, payload.notes),
+            (payload.user_id, payload.date, payload.duration_min, payload.notes),
         )
         conn.commit()
         return cur.fetchone()
@@ -101,7 +100,7 @@ def create_session(payload: SessionCreate, conn=Depends(get_db)):
 def list_sessions(user_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
-            'SELECT * FROM "WorkoutSession" WHERE user_id = %s ORDER BY date DESC',
+            "SELECT * FROM workoutsession WHERE user_id = %s ORDER BY date DESC",
             (user_id,),
         )
         return cur.fetchall()
@@ -110,7 +109,7 @@ def list_sessions(user_id: int, conn=Depends(get_db)):
 @router.get("/sessions/{session_id}")
 def get_session(session_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
-        cur.execute('SELECT * FROM "WorkoutSession" WHERE session_id = %s', (session_id,))
+        cur.execute("SELECT * FROM workoutsession WHERE session_id = %s", (session_id,))
         row = cur.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -119,19 +118,18 @@ def get_session(session_id: int, conn=Depends(get_db)):
 
 @router.get("/sessions/{session_id}/full")
 def get_session_full(session_id: int, conn=Depends(get_db)):
-    """Session with all exercises and sets nested."""
     with conn.cursor() as cur:
-        cur.execute('SELECT * FROM "WorkoutSession" WHERE session_id = %s', (session_id,))
+        cur.execute("SELECT * FROM workoutsession WHERE session_id = %s", (session_id,))
         session = cur.fetchone()
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
         cur.execute(
             """
-            SELECT we.workout_exercise_id, we.order_num,
-                   e.exercise_id, e.name, e.muscle_group, e.equipment
-            FROM "WorkoutExercise" we
-            JOIN "Exercise" e ON e.exercise_id = we.exercise_id
+            SELECT we.workout_ex_id, we.order_num,
+                   e.exercise_id, e.name, e.muscle_group, e.exercise_type
+            FROM workoutexercise we
+            JOIN exercise e ON e.exercise_id = we.exercise_id
             WHERE we.session_id = %s
             ORDER BY we.order_num
             """,
@@ -143,8 +141,8 @@ def get_session_full(session_id: int, conn=Depends(get_db)):
         result["exercises"] = []
         for ex in exercises:
             cur.execute(
-                'SELECT * FROM "SetLog" WHERE workout_exercise_id = %s ORDER BY set_number',
-                (ex["workout_exercise_id"],),
+                "SELECT * FROM setlog WHERE workout_ex_id = %s ORDER BY set_number",
+                (ex["workout_ex_id"],),
             )
             sets = cur.fetchall()
             ex_dict = dict(ex)
@@ -157,7 +155,7 @@ def get_session_full(session_id: int, conn=Depends(get_db)):
 @router.put("/sessions/{session_id}")
 def update_session(session_id: int, payload: SessionUpdate, conn=Depends(get_db)):
     fields, values = [], []
-    for col, val in [("date", payload.date), ("duration_minutes", payload.duration_minutes), ("notes", payload.notes)]:
+    for col, val in [("date", payload.date), ("duration_min", payload.duration_min), ("notes", payload.notes)]:
         if val is not None:
             fields.append(f"{col} = %s")
             values.append(val)
@@ -166,7 +164,7 @@ def update_session(session_id: int, payload: SessionUpdate, conn=Depends(get_db)
     values.append(session_id)
     with conn.cursor() as cur:
         cur.execute(
-            f'UPDATE "WorkoutSession" SET {", ".join(fields)} WHERE session_id = %s RETURNING *',
+            f"UPDATE workoutsession SET {', '.join(fields)} WHERE session_id = %s RETURNING *",
             values,
         )
         conn.commit()
@@ -179,7 +177,7 @@ def update_session(session_id: int, payload: SessionUpdate, conn=Depends(get_db)
 @router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_session(session_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
-        cur.execute('DELETE FROM "WorkoutSession" WHERE session_id = %s RETURNING session_id', (session_id,))
+        cur.execute("DELETE FROM workoutsession WHERE session_id = %s RETURNING session_id", (session_id,))
         conn.commit()
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Session not found")
@@ -192,7 +190,7 @@ def add_exercise_to_session(payload: WorkoutExerciseCreate, conn=Depends(get_db)
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO "WorkoutExercise" (session_id, exercise_id, order_num)
+            INSERT INTO workoutexercise (session_id, exercise_id, order_num)
             VALUES (%s, %s, %s)
             RETURNING *
             """,
@@ -207,9 +205,9 @@ def list_session_exercises(session_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT we.*, e.name, e.muscle_group, e.equipment
-            FROM "WorkoutExercise" we
-            JOIN "Exercise" e ON e.exercise_id = we.exercise_id
+            SELECT we.*, e.name, e.muscle_group, e.exercise_type
+            FROM workoutexercise we
+            JOIN exercise e ON e.exercise_id = we.exercise_id
             WHERE we.session_id = %s
             ORDER BY we.order_num
             """,
@@ -218,12 +216,12 @@ def list_session_exercises(session_id: int, conn=Depends(get_db)):
         return cur.fetchall()
 
 
-@router.delete("/exercises-in-session/{workout_exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_exercise_from_session(workout_exercise_id: int, conn=Depends(get_db)):
+@router.delete("/exercises-in-session/{workout_ex_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_exercise_from_session(workout_ex_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
-            'DELETE FROM "WorkoutExercise" WHERE workout_exercise_id = %s RETURNING workout_exercise_id',
-            (workout_exercise_id,),
+            "DELETE FROM workoutexercise WHERE workout_ex_id = %s RETURNING workout_ex_id",
+            (workout_ex_id,),
         )
         conn.commit()
         if not cur.fetchone():
@@ -235,40 +233,31 @@ def remove_exercise_from_session(workout_exercise_id: int, conn=Depends(get_db))
 @router.post("/sets", status_code=status.HTTP_201_CREATED)
 def log_set(payload: SetLogCreate, conn=Depends(get_db)):
     with conn.cursor() as cur:
-        # Insert the set
         cur.execute(
             """
-            INSERT INTO "SetLog" (workout_exercise_id, set_number, weight_lbs, reps, rpe)
+            INSERT INTO setlog (workout_ex_id, set_number, reps, weight_lbs, duration_sec)
             VALUES (%s, %s, %s, %s, %s)
             RETURNING *
             """,
-            (payload.workout_exercise_id, payload.set_number, payload.weight_lbs, payload.reps, payload.rpe),
+            (payload.workout_ex_id, payload.set_number, payload.reps, payload.weight_lbs, payload.duration_sec),
         )
         new_set = cur.fetchone()
-        set_id = new_set["set_id"]
 
-        # Resolve user + exercise for PR check
-        context = _get_user_and_exercise_for_set(cur, payload.workout_exercise_id)
-        if context:
-            _check_and_insert_pr(
-                cur,
-                user_id=context["user_id"],
-                exercise_id=context["exercise_id"],
-                weight_lbs=payload.weight_lbs,
-                reps=payload.reps,
-                set_id=set_id,
-            )
+        if payload.weight_lbs and payload.reps:
+            context = _get_user_and_exercise_for_set(cur, payload.workout_ex_id)
+            if context:
+                _check_and_insert_pr(cur, context["user_id"], context["exercise_id"], payload.weight_lbs, payload.reps)
 
         conn.commit()
         return new_set
 
 
-@router.get("/exercises-in-session/{workout_exercise_id}/sets")
-def list_sets(workout_exercise_id: int, conn=Depends(get_db)):
+@router.get("/exercises-in-session/{workout_ex_id}/sets")
+def list_sets(workout_ex_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
-            'SELECT * FROM "SetLog" WHERE workout_exercise_id = %s ORDER BY set_number',
-            (workout_exercise_id,),
+            "SELECT * FROM setlog WHERE workout_ex_id = %s ORDER BY set_number",
+            (workout_ex_id,),
         )
         return cur.fetchall()
 
@@ -276,7 +265,7 @@ def list_sets(workout_exercise_id: int, conn=Depends(get_db)):
 @router.get("/sets/{set_id}")
 def get_set(set_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
-        cur.execute('SELECT * FROM "SetLog" WHERE set_id = %s', (set_id,))
+        cur.execute("SELECT * FROM setlog WHERE set_id = %s", (set_id,))
         row = cur.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Set not found")
@@ -288,9 +277,9 @@ def update_set(set_id: int, payload: SetLogUpdate, conn=Depends(get_db)):
     fields, values = [], []
     for col, val in [
         ("set_number", payload.set_number),
-        ("weight_lbs", payload.weight_lbs),
         ("reps", payload.reps),
-        ("rpe", payload.rpe),
+        ("weight_lbs", payload.weight_lbs),
+        ("duration_sec", payload.duration_sec),
     ]:
         if val is not None:
             fields.append(f"{col} = %s")
@@ -300,7 +289,7 @@ def update_set(set_id: int, payload: SetLogUpdate, conn=Depends(get_db)):
     values.append(set_id)
     with conn.cursor() as cur:
         cur.execute(
-            f'UPDATE "SetLog" SET {", ".join(fields)} WHERE set_id = %s RETURNING *',
+            f"UPDATE setlog SET {', '.join(fields)} WHERE set_id = %s RETURNING *",
             values,
         )
         updated = cur.fetchone()
@@ -308,18 +297,10 @@ def update_set(set_id: int, payload: SetLogUpdate, conn=Depends(get_db)):
             conn.rollback()
             raise HTTPException(status_code=404, detail="Set not found")
 
-        # Re-run PR check if weight changed
-        if payload.weight_lbs is not None:
-            context = _get_user_and_exercise_for_set(cur, updated["workout_exercise_id"])
+        if payload.weight_lbs and payload.reps:
+            context = _get_user_and_exercise_for_set(cur, updated["workout_ex_id"])
             if context:
-                _check_and_insert_pr(
-                    cur,
-                    user_id=context["user_id"],
-                    exercise_id=context["exercise_id"],
-                    weight_lbs=updated["weight_lbs"],
-                    reps=updated["reps"],
-                    set_id=set_id,
-                )
+                _check_and_insert_pr(cur, context["user_id"], context["exercise_id"], updated["weight_lbs"], updated["reps"])
 
         conn.commit()
         return updated
@@ -328,7 +309,7 @@ def update_set(set_id: int, payload: SetLogUpdate, conn=Depends(get_db)):
 @router.delete("/sets/{set_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_set(set_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
-        cur.execute('DELETE FROM "SetLog" WHERE set_id = %s RETURNING set_id', (set_id,))
+        cur.execute("DELETE FROM setlog WHERE set_id = %s RETURNING set_id", (set_id,))
         conn.commit()
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Set not found")

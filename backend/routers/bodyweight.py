@@ -1,6 +1,7 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import date
 from database import get_db
 
 router = APIRouter()
@@ -9,25 +10,28 @@ router = APIRouter()
 class BodyWeightCreate(BaseModel):
     user_id: int
     weight_lbs: float
-    logged_at: datetime | None = None
+    date: Optional[date] = None
+    notes: Optional[str] = None
 
 
 class BodyWeightUpdate(BaseModel):
-    weight_lbs: float | None = None
-    logged_at: datetime | None = None
+    weight_lbs: Optional[float] = None
+    date: Optional[date] = None
+    notes: Optional[str] = None
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def log_bodyweight(payload: BodyWeightCreate, conn=Depends(get_db)):
-    logged_at = payload.logged_at or datetime.utcnow()
+    from datetime import date as date_type
+    log_date = payload.date or date_type.today()
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO "BodyWeightLog" (user_id, weight_lbs, logged_at)
-            VALUES (%s, %s, %s)
+            INSERT INTO bodyweightlog (user_id, weight_lbs, date, notes)
+            VALUES (%s, %s, %s, %s)
             RETURNING *
             """,
-            (payload.user_id, payload.weight_lbs, logged_at),
+            (payload.user_id, payload.weight_lbs, log_date, payload.notes),
         )
         conn.commit()
         return cur.fetchone()
@@ -38,9 +42,9 @@ def list_bodyweight(user_id: int, limit: int = 90, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT * FROM "BodyWeightLog"
+            SELECT * FROM bodyweightlog
             WHERE user_id = %s
-            ORDER BY logged_at DESC
+            ORDER BY date DESC
             LIMIT %s
             """,
             (user_id, limit),
@@ -48,31 +52,34 @@ def list_bodyweight(user_id: int, limit: int = 90, conn=Depends(get_db)):
         return cur.fetchall()
 
 
-@router.get("/{log_id}")
-def get_bodyweight(log_id: int, conn=Depends(get_db)):
+@router.get("/{bw_log_id}")
+def get_bodyweight(bw_log_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
-        cur.execute('SELECT * FROM "BodyWeightLog" WHERE log_id = %s', (log_id,))
+        cur.execute("SELECT * FROM bodyweightlog WHERE bw_log_id = %s", (bw_log_id,))
         row = cur.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Log entry not found")
     return row
 
 
-@router.put("/{log_id}")
-def update_bodyweight(log_id: int, payload: BodyWeightUpdate, conn=Depends(get_db)):
+@router.put("/{bw_log_id}")
+def update_bodyweight(bw_log_id: int, payload: BodyWeightUpdate, conn=Depends(get_db)):
     fields, values = [], []
     if payload.weight_lbs is not None:
         fields.append("weight_lbs = %s")
         values.append(payload.weight_lbs)
-    if payload.logged_at is not None:
-        fields.append("logged_at = %s")
-        values.append(payload.logged_at)
+    if payload.date is not None:
+        fields.append("date = %s")
+        values.append(payload.date)
+    if payload.notes is not None:
+        fields.append("notes = %s")
+        values.append(payload.notes)
     if not fields:
         raise HTTPException(status_code=400, detail="No fields to update")
-    values.append(log_id)
+    values.append(bw_log_id)
     with conn.cursor() as cur:
         cur.execute(
-            f'UPDATE "BodyWeightLog" SET {", ".join(fields)} WHERE log_id = %s RETURNING *',
+            f"UPDATE bodyweightlog SET {', '.join(fields)} WHERE bw_log_id = %s RETURNING *",
             values,
         )
         conn.commit()
@@ -82,10 +89,10 @@ def update_bodyweight(log_id: int, payload: BodyWeightUpdate, conn=Depends(get_d
     return row
 
 
-@router.delete("/{log_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_bodyweight(log_id: int, conn=Depends(get_db)):
+@router.delete("/{bw_log_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_bodyweight(bw_log_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
-        cur.execute('DELETE FROM "BodyWeightLog" WHERE log_id = %s RETURNING log_id', (log_id,))
+        cur.execute("DELETE FROM bodyweightlog WHERE bw_log_id = %s RETURNING bw_log_id", (bw_log_id,))
         conn.commit()
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Log entry not found")
