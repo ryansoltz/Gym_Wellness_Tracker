@@ -34,9 +34,9 @@ export default function BodyWeight() {
     }
   }
 
-  async function handleDelete(logId: number) {
-    await deleteBodyWeight(logId);
-    setLogs((prev) => prev.filter((l) => l.log_id !== logId));
+  async function handleDelete(bwLogId: number) {
+    await deleteBodyWeight(bwLogId);
+    setLogs((prev) => prev.filter((l) => l.bw_log_id !== bwLogId));
   }
 
   const latest = logs[0];
@@ -66,7 +66,7 @@ export default function BodyWeight() {
         {logs.length > 1 && (
           <div style={styles.statCard}>
             <div style={styles.statValue}>{logs[logs.length - 1].weight_lbs} lbs</div>
-            <div style={styles.statLabel}>Starting ({logs[logs.length - 1].logged_at.slice(0, 10)})</div>
+            <div style={styles.statLabel}>Starting ({logs[logs.length - 1].date})</div>
           </div>
         )}
       </div>
@@ -95,18 +95,18 @@ export default function BodyWeight() {
           <table style={styles.table}>
             <thead>
               <tr>
-                {["Date & Time", "Weight", ""].map((h) => (
+                {["Date", "Weight", ""].map((h) => (
                   <th key={h} style={styles.th}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {logs.map((log) => (
-                <tr key={log.log_id}>
-                  <td style={styles.td}>{new Date(log.logged_at).toLocaleString()}</td>
+                <tr key={log.bw_log_id}>
+                  <td style={styles.td}>{log.date}</td>
                   <td style={styles.td}><strong>{log.weight_lbs}</strong> lbs</td>
                   <td style={{ ...styles.td, textAlign: "right" }}>
-                    <button style={styles.btnDanger} onClick={() => handleDelete(log.log_id)}>Delete</button>
+                    <button style={styles.btnDanger} onClick={() => handleDelete(log.bw_log_id)}>Delete</button>
                   </td>
                 </tr>
               ))}

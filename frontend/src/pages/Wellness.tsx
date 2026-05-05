@@ -19,8 +19,7 @@ export default function Wellness() {
   const [sleepQuality, setSleepQuality] = useState("");
   const [energyLevel, setEnergyLevel] = useState("");
   const [mood, setMood] = useState("");
-  const [stressLevel, setStressLevel] = useState("");
-  const [notes, setNotes] = useState("");
+  const [waterOz, setWaterOz] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -45,8 +44,7 @@ export default function Wellness() {
         sleep_quality: sleepQuality ? Number(sleepQuality) : undefined,
         energy_level: energyLevel ? Number(energyLevel) : undefined,
         mood: mood ? Number(mood) : undefined,
-        stress_level: stressLevel ? Number(stressLevel) : undefined,
-        notes: notes || undefined,
+        water_oz: waterOz ? Number(waterOz) : undefined,
       });
       setSaved(true);
     } catch (err: unknown) {
@@ -81,7 +79,7 @@ export default function Wellness() {
       {tab === "log" && (
         <div style={styles.card}>
           <h3 style={styles.cardTitle}>Log Wellness</h3>
-          {saved && <div style={styles.success}>Saved! (upserted for {date})</div>}
+          {saved && <div style={styles.success}>Saved for {date}!</div>}
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label style={styles.label}>Date</label>
@@ -90,10 +88,10 @@ export default function Wellness() {
             <div style={styles.scaleRow}>
               {[
                 { label: "Sleep Hours", val: sleepHours, set: setSleepHours, placeholder: "e.g. 7.5", step: "0.5", max: "24" },
-                { label: "Sleep Quality (1–10)", val: sleepQuality, set: setSleepQuality, placeholder: "1–10", step: "1", max: "10" },
-                { label: "Energy Level (1–10)", val: energyLevel, set: setEnergyLevel, placeholder: "1–10", step: "1", max: "10" },
-                { label: "Mood (1–10)", val: mood, set: setMood, placeholder: "1–10", step: "1", max: "10" },
-                { label: "Stress Level (1–10)", val: stressLevel, set: setStressLevel, placeholder: "1–10", step: "1", max: "10" },
+                { label: "Sleep Quality (1–5)", val: sleepQuality, set: setSleepQuality, placeholder: "1–5", step: "1", max: "5" },
+                { label: "Energy Level (1–5)", val: energyLevel, set: setEnergyLevel, placeholder: "1–5", step: "1", max: "5" },
+                { label: "Mood (1–5)", val: mood, set: setMood, placeholder: "1–5", step: "1", max: "5" },
+                { label: "Water (oz)", val: waterOz, set: setWaterOz, placeholder: "e.g. 64", step: "1", max: "300" },
               ].map(({ label, val, set, placeholder, step, max }) => (
                 <div key={label} style={{ flex: 1, minWidth: 150 }}>
                   <label style={styles.label}>{label}</label>
@@ -101,10 +99,6 @@ export default function Wellness() {
                     placeholder={placeholder} step={step} min="0" max={max} />
                 </div>
               ))}
-            </div>
-            <div>
-              <label style={styles.label}>Notes</label>
-              <textarea style={{ ...styles.input, resize: "vertical", minHeight: 64 }} value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
             <button style={styles.btnPrimary} type="submit" disabled={saving}>{saving ? "Saving…" : "Save"}</button>
           </form>
@@ -117,19 +111,19 @@ export default function Wellness() {
           <div style={styles.card}>
             <table style={styles.table}>
               <thead>
-                <tr>{["Date", "Sleep hrs", "Sleep Q", "Energy", "Mood", "Stress"].map((h) => (
+                <tr>{["Date", "Sleep hrs", "Sleep Q", "Energy", "Mood", "Water (oz)"].map((h) => (
                   <th key={h} style={styles.th}>{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
                 {logs.map((l) => (
-                  <tr key={l.log_id}>
+                  <tr key={l.wellness_id}>
                     <td style={styles.td}>{l.date}</td>
                     <td style={styles.td}>{l.sleep_hours ?? "—"}</td>
                     <td style={styles.td}>{l.sleep_quality ?? "—"}</td>
                     <td style={styles.td}>{l.energy_level ?? "—"}</td>
                     <td style={styles.td}>{l.mood ?? "—"}</td>
-                    <td style={styles.td}>{l.stress_level ?? "—"}</td>
+                    <td style={styles.td}>{l.water_oz ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>

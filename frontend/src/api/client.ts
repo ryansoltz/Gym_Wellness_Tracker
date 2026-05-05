@@ -82,20 +82,20 @@ export const deleteSession = (sessionId: number) =>
 
 export interface SetLog {
   set_id: number;
-  workout_exercise_id: number;
+  workout_ex_id: number;
   set_number: number;
   weight_lbs: number;
   reps: number;
-  rpe: number | null;
+  duration_sec: number | null;
 }
 
 export const addExerciseToSession = (body: { session_id: number; exercise_id: number; order_num?: number }) =>
-  request<{ workout_exercise_id: number }>("/workouts/exercises-in-session", {
+  request<{ workout_ex_id: number }>("/workouts/exercises-in-session", {
     method: "POST",
     body: JSON.stringify(body),
   });
 
-export const logSet = (body: { workout_exercise_id: number; set_number: number; weight_lbs: number; reps: number; rpe?: number }) =>
+export const logSet = (body: { workout_ex_id: number; set_number: number; weight_lbs: number; reps: number; duration_sec?: number }) =>
   request<SetLog>("/workouts/sets", { method: "POST", body: JSON.stringify(body) });
 
 // ── Goals ────────────────────────────────────────────────────────────────────
@@ -103,21 +103,20 @@ export const logSet = (body: { workout_exercise_id: number; set_number: number; 
 export interface Goal {
   goal_id: number;
   user_id: number;
-  type: string;
+  exercise_id: number | null;
+  goal_type: string;
   target_value: number;
-  current_value: number;
-  deadline: string | null;
-  status: string;
-  created_at: string;
+  target_date: string | null;
+  is_completed: boolean;
 }
 
 export const listGoals = (userId: number) =>
   request<Goal[]>(`/goals/user/${userId}`);
 
-export const createGoal = (body: { user_id: number; type: string; target_value: number; current_value?: number; deadline?: string }) =>
+export const createGoal = (body: { user_id: number; goal_type: string; target_value: number; target_date?: string; exercise_id?: number }) =>
   request<Goal>("/goals/", { method: "POST", body: JSON.stringify(body) });
 
-export const updateGoal = (goalId: number, body: Partial<Goal>) =>
+export const updateGoal = (goalId: number, body: Partial<{ goal_type: string; target_value: number; target_date: string; is_completed: boolean; exercise_id: number }>) =>
   request<Goal>(`/goals/${goalId}`, { method: "PUT", body: JSON.stringify(body) });
 
 export const deleteGoal = (goalId: number) =>
@@ -133,7 +132,7 @@ export interface PersonalRecord {
   muscle_group: string | null;
   weight_lbs: number;
   reps: number;
-  achieved_on: string;
+  achieved_date: string;
 }
 
 export const listPRs = (userId: number) =>
@@ -142,16 +141,17 @@ export const listPRs = (userId: number) =>
 // ── Body Weight ──────────────────────────────────────────────────────────────
 
 export interface BodyWeightLog {
-  log_id: number;
+  bw_log_id: number;
   user_id: number;
   weight_lbs: number;
-  logged_at: string;
+  date: string;
+  notes: string | null;
 }
 
 export const listBodyWeight = (userId: number, limit = 90) =>
   request<BodyWeightLog[]>(`/bodyweight/user/${userId}?limit=${limit}`);
 
-export const logBodyWeight = (body: { user_id: number; weight_lbs: number }) =>
+export const logBodyWeight = (body: { user_id: number; weight_lbs: number; date?: string; notes?: string }) =>
   request<BodyWeightLog>("/bodyweight/", { method: "POST", body: JSON.stringify(body) });
 
 export const deleteBodyWeight = (logId: number) =>
@@ -160,15 +160,14 @@ export const deleteBodyWeight = (logId: number) =>
 // ── Wellness ─────────────────────────────────────────────────────────────────
 
 export interface WellnessLog {
-  log_id: number;
+  wellness_id: number;
   user_id: number;
   date: string;
   sleep_hours: number | null;
   sleep_quality: number | null;
   energy_level: number | null;
   mood: number | null;
-  stress_level: number | null;
-  notes: string | null;
+  water_oz: number | null;
 }
 
 export interface WellnessCorrelation extends WellnessLog {
@@ -184,7 +183,7 @@ export const listWellness = (userId: number) =>
 export const logWellness = (body: {
   user_id: number; date: string;
   sleep_hours?: number; sleep_quality?: number;
-  energy_level?: number; mood?: number; stress_level?: number; notes?: string;
+  energy_level?: number; mood?: number; water_oz?: number;
 }) => request<WellnessLog>("/wellness/", { method: "POST", body: JSON.stringify(body) });
 
 export const getWellnessCorrelation = (userId: number) =>
@@ -196,7 +195,7 @@ export interface DashboardSummary {
   total_sessions: number;
   lifetime_volume_lbs: number;
   sessions_this_week: number;
-  latest_bodyweight: { weight_lbs: number; logged_at: string } | null;
+  latest_bodyweight: { weight_lbs: number; date: string } | null;
   active_goals: number;
   exercises_with_pr: number;
   weekly_volume: { date: string; volume_lbs: number }[];

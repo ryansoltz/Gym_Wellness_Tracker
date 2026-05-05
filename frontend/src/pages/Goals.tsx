@@ -8,9 +8,9 @@ export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [type, setType] = useState("");
+  const [goalType, setGoalType] = useState("");
   const [target, setTarget] = useState("");
-  const [deadline, setDeadline] = useState("");
+  const [targetDate, setTargetDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,8 +27,8 @@ export default function Goals() {
     e.preventDefault();
     setSaving(true);
     try {
-      await createGoal({ user_id: userId, type, target_value: Number(target), deadline: deadline || undefined });
-      setType(""); setTarget(""); setDeadline("");
+      await createGoal({ user_id: userId, goal_type: goalType, target_value: Number(target), target_date: targetDate || undefined });
+      setGoalType(""); setTarget(""); setTargetDate("");
       setShowForm(false);
       load();
     } catch (err: unknown) {
@@ -38,9 +38,8 @@ export default function Goals() {
     }
   }
 
-  async function toggleStatus(goal: Goal) {
-    const next = goal.status === "active" ? "completed" : "active";
-    const updated = await updateGoal(goal.goal_id, { status: next });
+  async function toggleComplete(goal: Goal) {
+    const updated = await updateGoal(goal.goal_id, { is_completed: !goal.is_completed });
     setGoals((prev) => prev.map((g) => g.goal_id === goal.goal_id ? updated : g));
   }
 
@@ -50,8 +49,8 @@ export default function Goals() {
     setGoals((prev) => prev.filter((g) => g.goal_id !== goalId));
   }
 
-  const active = goals.filter((g) => g.status === "active");
-  const completed = goals.filter((g) => g.status !== "active");
+  const active = goals.filter((g) => !g.is_completed);
+  const completed = goals.filter((g) => g.is_completed);
 
   return (
     <div>
@@ -67,12 +66,12 @@ export default function Goals() {
       {showForm && (
         <form onSubmit={handleAdd} style={styles.formCard}>
           <h3 style={{ fontWeight: 600, marginBottom: 14 }}>New Goal</h3>
-          <label style={styles.label}>Type *</label>
-          <input style={styles.input} value={type} onChange={(e) => setType(e.target.value)} placeholder="e.g. Bench Press 1RM, Run 5K…" required />
+          <label style={styles.label}>Goal Type *</label>
+          <input style={styles.input} value={goalType} onChange={(e) => setGoalType(e.target.value)} placeholder="e.g. Bench Press 1RM, Run 5K…" required />
           <label style={styles.label}>Target Value *</label>
           <input style={styles.input} type="number" value={target} onChange={(e) => setTarget(e.target.value)} required />
-          <label style={styles.label}>Deadline</label>
-          <input style={styles.input} type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+          <label style={styles.label}>Target Date</label>
+          <input style={styles.input} type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
           <button style={styles.btnPrimary} type="submit" disabled={saving}>{saving ? "Saving…" : "Add Goal"}</button>
         </form>
       )}
@@ -81,12 +80,12 @@ export default function Goals() {
         <>
           <h3 style={styles.sectionTitle}>Active ({active.length})</h3>
           {active.length === 0 && <p style={styles.empty}>No active goals. Add one!</p>}
-          {active.map((g) => <GoalCard key={g.goal_id} goal={g} onToggle={toggleStatus} onDelete={handleDelete} />)}
+          {active.map((g) => <GoalCard key={g.goal_id} goal={g} onToggle={toggleComplete} onDelete={handleDelete} />)}
 
           {completed.length > 0 && (
             <>
               <h3 style={{ ...styles.sectionTitle, marginTop: 24 }}>Completed ({completed.length})</h3>
-              {completed.map((g) => <GoalCard key={g.goal_id} goal={g} onToggle={toggleStatus} onDelete={handleDelete} />)}
+              {completed.map((g) => <GoalCard key={g.goal_id} goal={g} onToggle={toggleComplete} onDelete={handleDelete} />)}
             </>
           )}
         </>
@@ -96,15 +95,14 @@ export default function Goals() {
 }
 
 function GoalCard({ goal, onToggle, onDelete }: { goal: Goal; onToggle: (g: Goal) => void; onDelete: (id: number) => void }) {
-  const pct = Math.min((goal.current_value / goal.target_value) * 100, 100);
-  const done = goal.status !== "active";
+  const done = goal.is_completed;
   return (
     <div style={{ ...styles.card, opacity: done ? 0.7 : 1 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <div style={{ fontWeight: 600, fontSize: 15, textDecoration: done ? "line-through" : "none" }}>{goal.type}</div>
-          <div style={styles.meta}>Target: {goal.target_value} · Current: {goal.current_value}</div>
-          {goal.deadline && <div style={styles.meta}>Deadline: {goal.deadline}</div>}
+          <div style={{ fontWeight: 600, fontSize: 15, textDecoration: done ? "line-through" : "none" }}>{goal.goal_type}</div>
+          <div style={styles.meta}>Target: {goal.target_value}</div>
+          {goal.target_date && <div style={styles.meta}>Target Date: {goal.target_date}</div>}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button style={styles.btnGhost} onClick={() => onToggle(goal)}>
@@ -112,9 +110,6 @@ function GoalCard({ goal, onToggle, onDelete }: { goal: Goal; onToggle: (g: Goal
           </button>
           <button style={styles.btnDanger} onClick={() => onDelete(goal.goal_id)}>Delete</button>
         </div>
-      </div>
-      <div style={{ marginTop: 10, background: "#e5e7eb", borderRadius: 99, height: 6 }}>
-        <div style={{ width: `${pct}%`, background: done ? "#6b7280" : "#4f46e5", height: "100%", borderRadius: 99 }} />
       </div>
     </div>
   );

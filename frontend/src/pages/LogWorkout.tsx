@@ -68,7 +68,7 @@ export default function LogWorkout() {
       });
       for (let order = 0; order < entries.length; order++) {
         const entry = entries[order];
-        const { workout_exercise_id } = await addExerciseToSession({
+        const { workout_ex_id } = await addExerciseToSession({
           session_id: session.session_id,
           exercise_id: entry.exercise_id,
           order_num: order + 1,
@@ -77,7 +77,7 @@ export default function LogWorkout() {
           const s = entry.sets[si];
           if (!s.weight || !s.reps) continue;
           await logSet({
-            workout_exercise_id,
+            workout_ex_id,
             set_number: si + 1,
             weight_lbs: Number(s.weight),
             reps: Number(s.reps),

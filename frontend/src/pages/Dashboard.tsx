@@ -66,7 +66,7 @@ export default function Dashboard() {
                   <td style={styles.td}>{pr.exercise_name}</td>
                   <td style={styles.td}>{pr.weight_lbs} lbs</td>
                   <td style={styles.td}>{pr.reps}</td>
-                  <td style={styles.td}>{pr.achieved_on}</td>
+                  <td style={styles.td}>{pr.achieved_date}</td>
                 </tr>
               ))}
             </tbody>
