@@ -19,6 +19,7 @@ export default function Wellness() {
   const [sleepQuality, setSleepQuality] = useState("");
   const [energyLevel, setEnergyLevel] = useState("");
   const [mood, setMood] = useState("");
+  const [stressLevel, setStressLevel] = useState("");
   const [waterOz, setWaterOz] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -44,6 +45,7 @@ export default function Wellness() {
         sleep_quality: sleepQuality ? Number(sleepQuality) : undefined,
         energy_level: energyLevel ? Number(energyLevel) : undefined,
         mood: mood ? Number(mood) : undefined,
+        stress_level: stressLevel ? Number(stressLevel) : undefined,
         water_oz: waterOz ? Number(waterOz) : undefined,
       });
       setSaved(true);
@@ -91,6 +93,7 @@ export default function Wellness() {
                 { label: "Sleep Quality (1–5)", val: sleepQuality, set: setSleepQuality, placeholder: "1–5", step: "1", max: "5" },
                 { label: "Energy Level (1–5)", val: energyLevel, set: setEnergyLevel, placeholder: "1–5", step: "1", max: "5" },
                 { label: "Mood (1–5)", val: mood, set: setMood, placeholder: "1–5", step: "1", max: "5" },
+                { label: "Stress Level (1–10)", val: stressLevel, set: setStressLevel, placeholder: "1–10", step: "1", max: "10" },
                 { label: "Water (oz)", val: waterOz, set: setWaterOz, placeholder: "e.g. 64", step: "1", max: "300" },
               ].map(({ label, val, set, placeholder, step, max }) => (
                 <div key={label} style={{ flex: 1, minWidth: 150 }}>
@@ -111,18 +114,19 @@ export default function Wellness() {
           <div style={styles.card}>
             <table style={styles.table}>
               <thead>
-                <tr>{["Date", "Sleep hrs", "Sleep Q", "Energy", "Mood", "Water (oz)"].map((h) => (
+                <tr>{["Date", "Sleep hrs", "Sleep Q", "Energy", "Mood", "Stress", "Water (oz)"].map((h) => (
                   <th key={h} style={styles.th}>{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
                 {logs.map((l) => (
-                  <tr key={l.wellness_id}>
+                  <tr key={l.log_id}>
                     <td style={styles.td}>{l.date}</td>
                     <td style={styles.td}>{l.sleep_hours ?? "—"}</td>
                     <td style={styles.td}>{l.sleep_quality ?? "—"}</td>
                     <td style={styles.td}>{l.energy_level ?? "—"}</td>
                     <td style={styles.td}>{l.mood ?? "—"}</td>
+                    <td style={styles.td}>{l.stress_level ?? "—"}</td>
                     <td style={styles.td}>{l.water_oz ?? "—"}</td>
                   </tr>
                 ))}

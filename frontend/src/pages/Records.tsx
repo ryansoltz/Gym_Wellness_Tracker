@@ -68,12 +68,12 @@ export default function Records() {
                 </thead>
                 <tbody>
                   {prs
-                    .sort((a, b) => new Date(b.achieved_date).getTime() - new Date(a.achieved_date).getTime())
+                    .sort((a, b) => new Date(b.achieved_on).getTime() - new Date(a.achieved_on).getTime())
                     .map((pr) => (
                       <tr key={pr.pr_id}>
                         <td style={styles.td}>{pr.weight_lbs} lbs</td>
                         <td style={styles.td}>{pr.reps}</td>
-                        <td style={styles.td}>{pr.achieved_date}</td>
+                        <td style={styles.td}>{pr.achieved_on}</td>
                       </tr>
                     ))}
                 </tbody>

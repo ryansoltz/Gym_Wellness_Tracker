@@ -25,7 +25,7 @@ def create_user(payload: UserCreate, conn=Depends(get_db)):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO "User" (email, password_hash, username)
+                INSERT INTO users (email, password_hash, username)
                 VALUES (%s, %s, %s)
                 RETURNING user_id, email, username, created_at
                 """,
@@ -41,7 +41,7 @@ def create_user(payload: UserCreate, conn=Depends(get_db)):
 @router.get("/")
 def list_users(conn=Depends(get_db)):
     with conn.cursor() as cur:
-        cur.execute('SELECT user_id, email, username, created_at FROM "User" ORDER BY created_at DESC')
+        cur.execute('SELECT user_id, email, username, created_at FROM users ORDER BY created_at DESC')
         return cur.fetchall()
 
 
@@ -49,7 +49,7 @@ def list_users(conn=Depends(get_db)):
 def get_user(user_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
-            'SELECT user_id, email, username, created_at FROM "User" WHERE user_id = %s',
+            'SELECT user_id, email, username, created_at FROM users WHERE user_id = %s',
             (user_id,),
         )
         row = cur.fetchone()
@@ -75,7 +75,7 @@ def update_user(user_id: int, payload: UserUpdate, conn=Depends(get_db)):
     values.append(user_id)
     with conn.cursor() as cur:
         cur.execute(
-            f'UPDATE "User" SET {", ".join(fields)} WHERE user_id = %s '
+            f'UPDATE users SET {", ".join(fields)} WHERE user_id = %s '
             'RETURNING user_id, email, username, created_at',
             values,
         )
@@ -89,7 +89,7 @@ def update_user(user_id: int, payload: UserUpdate, conn=Depends(get_db)):
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
-        cur.execute('DELETE FROM "User" WHERE user_id = %s RETURNING user_id', (user_id,))
+        cur.execute('DELETE FROM users WHERE user_id = %s RETURNING user_id', (user_id,))
         conn.commit()
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="User not found")

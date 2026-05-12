@@ -13,7 +13,7 @@ def list_prs(user_id: int, conn=Depends(get_db)):
             FROM personalrecord pr
             JOIN exercise e ON e.exercise_id = pr.exercise_id
             WHERE pr.user_id = %s
-            ORDER BY pr.achieved_date DESC
+            ORDER BY pr.achieved_on DESC
             """,
             (user_id,),
         )
@@ -49,7 +49,7 @@ def pr_history(user_id: int, exercise_id: int, conn=Depends(get_db)):
             FROM personalrecord pr
             JOIN exercise e ON e.exercise_id = pr.exercise_id
             WHERE pr.user_id = %s AND pr.exercise_id = %s
-            ORDER BY pr.achieved_date ASC
+            ORDER BY pr.achieved_on ASC
             """,
             (user_id, exercise_id),
         )

@@ -9,18 +9,19 @@ router = APIRouter()
 
 class GoalCreate(BaseModel):
     user_id: int
-    exercise_id: Optional[int] = None
-    goal_type: str
+    exercise: str
     target_value: float
-    target_date: Optional[date] = None
+    current_value: Optional[float] = 0
+    deadline: Optional[date] = None
+    status: Optional[str] = "active"
 
 
 class GoalUpdate(BaseModel):
-    exercise_id: Optional[int] = None
-    goal_type: Optional[str] = None
+    exercise: Optional[str] = None
     target_value: Optional[float] = None
-    target_date: Optional[date] = None
-    is_completed: Optional[bool] = None
+    current_value: Optional[float] = None
+    deadline: Optional[date] = None
+    status: Optional[str] = None
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
@@ -28,11 +29,11 @@ def create_goal(payload: GoalCreate, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO goal (user_id, exercise_id, goal_type, target_value, target_date, is_completed)
-            VALUES (%s, %s, %s, %s, %s, FALSE)
+            INSERT INTO goal (user_id, exercise, target_value, current_value, deadline, status)
+            VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING *
             """,
-            (payload.user_id, payload.exercise_id, payload.goal_type, payload.target_value, payload.target_date),
+            (payload.user_id, payload.exercise, payload.target_value, payload.current_value, payload.deadline, payload.status,),
         )
         conn.commit()
         return cur.fetchone()
@@ -59,11 +60,11 @@ def get_goal(goal_id: int, conn=Depends(get_db)):
 def update_goal(goal_id: int, payload: GoalUpdate, conn=Depends(get_db)):
     fields, values = [], []
     for col, val in [
-        ("exercise_id", payload.exercise_id),
-        ("goal_type", payload.goal_type),
+        ("exercise", payload.exercise),
         ("target_value", payload.target_value),
-        ("target_date", payload.target_date),
-        ("is_completed", payload.is_completed),
+        ("current_value", payload.current_value),
+        ("deadline", payload.deadline),
+        ("status", payload.status),
     ]:
         if val is not None:
             fields.append(f"{col} = %s")

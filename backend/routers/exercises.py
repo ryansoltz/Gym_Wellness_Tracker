@@ -9,13 +9,15 @@ router = APIRouter()
 class ExerciseCreate(BaseModel):
     name: str
     muscle_group: Optional[str] = None
-    exercise_type: Optional[str] = None
+    equipment: Optional[str] = None
+    description: Optional[str] = None
 
 
 class ExerciseUpdate(BaseModel):
     name: Optional[str] = None
     muscle_group: Optional[str] = None
-    exercise_type: Optional[str] = None
+    equipment: Optional[str] = None
+    description: Optional[str] = None
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
@@ -23,11 +25,11 @@ def create_exercise(payload: ExerciseCreate, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO exercise (name, muscle_group, exercise_type)
-            VALUES (%s, %s, %s)
-            RETURNING exercise_id, name, muscle_group, exercise_type
+            INSERT INTO exercise (name, muscle_group, equipment, description)
+            VALUES (%s, %s, %s, %s)
+            RETURNING exercise_id, name, muscle_group, equipment, description
             """,
-            (payload.name, payload.muscle_group, payload.exercise_type),
+            (payload.name, payload.muscle_group, payload.equipment, payload.description),
         )
         conn.commit()
         return cur.fetchone()
@@ -62,7 +64,8 @@ def update_exercise(exercise_id: int, payload: ExerciseUpdate, conn=Depends(get_
     for col, val in [
         ("name", payload.name),
         ("muscle_group", payload.muscle_group),
-        ("exercise_type", payload.exercise_type),
+        ("equipment", payload.equipment),
+        ("description", payload.description),
     ]:
         if val is not None:
             fields.append(f"{col} = %s")

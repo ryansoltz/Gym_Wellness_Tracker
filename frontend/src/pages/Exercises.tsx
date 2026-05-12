@@ -10,7 +10,7 @@ export default function Exercises() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [muscleGroup, setMuscleGroup] = useState("");
-  const [exerciseType, setExerciseType] = useState("");
+  const [equipment, setEquipment] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,8 +28,8 @@ export default function Exercises() {
     e.preventDefault();
     setSaving(true);
     try {
-      await createExercise({ name, muscle_group: muscleGroup || undefined, exercise_type: exerciseType || undefined });
-      setName(""); setMuscleGroup(""); setExerciseType("");
+      await createExercise({ name, muscle_group: muscleGroup || undefined, equipment: equipment || undefined });
+      setName(""); setMuscleGroup(""); setEquipment("");
       setShowForm(false);
       load();
     } catch (err: unknown) {
@@ -68,8 +68,8 @@ export default function Exercises() {
           <input style={styles.input} value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
           <label style={styles.label}>Muscle Group</label>
           <input style={styles.input} value={muscleGroup} onChange={(e) => setMuscleGroup(e.target.value)} placeholder="e.g. Chest, Back…" />
-          <label style={styles.label}>Exercise Type</label>
-          <input style={styles.input} value={exerciseType} onChange={(e) => setExerciseType(e.target.value)} placeholder="e.g. strength, cardio…" />
+          <label style={styles.label}>Equipment</label>
+          <input style={styles.input} value={equipment} onChange={(e) => setEquipment(e.target.value)} placeholder="e.g. Dumbell, Machine..." />
           <button style={styles.btnPrimary} type="submit" disabled={saving}>{saving ? "Saving…" : "Add"}</button>
         </form>
       )}
@@ -87,7 +87,7 @@ export default function Exercises() {
             <div key={ex.exercise_id} style={styles.card}>
               <div style={styles.exName}>{ex.name}</div>
               {ex.muscle_group && <div style={styles.tag}>{ex.muscle_group}</div>}
-              {ex.exercise_type && <div style={styles.meta}>{ex.exercise_type}</div>}
+              {ex.equipment && <div style={styles.meta}>{ex.equipment}</div>}
               <button style={styles.btnDanger} onClick={() => handleDelete(ex.exercise_id)}>Delete</button>
             </div>
           ))}

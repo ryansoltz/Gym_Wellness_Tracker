@@ -14,7 +14,7 @@ def dashboard_summary(user_id: int, conn=Depends(get_db)):
                 COALESCE(SUM(sl.weight_lbs * sl.reps), 0) AS lifetime_volume_lbs
             FROM workoutsession ws
             LEFT JOIN workoutexercise we ON we.session_id = ws.session_id
-            LEFT JOIN setlog sl ON sl.workout_ex_id = we.workout_ex_id
+            LEFT JOIN setlog sl ON sl.workout_exercise_id = we.workout_exercise_id
             WHERE ws.user_id = %s
             """,
             (user_id,),
@@ -35,10 +35,10 @@ def dashboard_summary(user_id: int, conn=Depends(get_db)):
 
         cur.execute(
             """
-            SELECT weight_lbs, date
+            SELECT weight_lbs, logged_at
             FROM bodyweightlog
             WHERE user_id = %s
-            ORDER BY date DESC
+            ORDER BY logged_at DESC
             LIMIT 1
             """,
             (user_id,),
@@ -46,7 +46,7 @@ def dashboard_summary(user_id: int, conn=Depends(get_db)):
         bw = cur.fetchone()
 
         cur.execute(
-            "SELECT COUNT(*) AS active_goals FROM goal WHERE user_id = %s AND is_completed = FALSE",
+            "SELECT COUNT(*) AS active_goals FROM goal WHERE user_id = %s AND status = 'active'",
             (user_id,),
         )
         goals = cur.fetchone()
@@ -63,7 +63,7 @@ def dashboard_summary(user_id: int, conn=Depends(get_db)):
                    COALESCE(SUM(sl.weight_lbs * sl.reps), 0) AS volume_lbs
             FROM workoutsession ws
             LEFT JOIN workoutexercise we ON we.session_id = ws.session_id
-            LEFT JOIN setlog sl ON sl.workout_ex_id = we.workout_ex_id
+            LEFT JOIN setlog sl ON sl.workout_exercise_id = we.workout_exercise_id
             WHERE ws.user_id = %s AND ws.date >= CURRENT_DATE - INTERVAL '6 days'
             GROUP BY ws.date
             ORDER BY ws.date ASC
@@ -88,12 +88,12 @@ def recent_prs(user_id: int, limit: int = 5, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT pr.pr_id, pr.weight_lbs, pr.reps, pr.achieved_date,
+            SELECT pr.pr_id, pr.weight_lbs, pr.reps, pr.achieved_on,
                    e.name AS exercise_name, e.muscle_group
             FROM personalrecord pr
             JOIN exercise e ON e.exercise_id = pr.exercise_id
             WHERE pr.user_id = %s
-            ORDER BY pr.achieved_date DESC, pr.pr_id DESC
+            ORDER BY pr.achieved_on DESC, pr.pr_id DESC
             LIMIT %s
             """,
             (user_id, limit),
@@ -112,7 +112,7 @@ def volume_by_muscle(user_id: int, days: int = 30, conn=Depends(get_db)):
             FROM workoutsession ws
             JOIN workoutexercise we ON we.session_id = ws.session_id
             JOIN exercise e ON e.exercise_id = we.exercise_id
-            LEFT JOIN setlog sl ON sl.workout_ex_id = we.workout_ex_id
+            LEFT JOIN setlog sl ON sl.workout_exercise_id = we.workout_exercise_id
             WHERE ws.user_id = %s AND ws.date >= CURRENT_DATE - INTERVAL '%s days'
             GROUP BY e.muscle_group
             ORDER BY volume_lbs DESC

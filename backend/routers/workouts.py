@@ -12,13 +12,13 @@ router = APIRouter()
 class SessionCreate(BaseModel):
     user_id: int
     date: date
-    duration_min: Optional[int] = None
+    duration_minutes: Optional[int] = None
     notes: Optional[str] = None
 
 
 class SessionUpdate(BaseModel):
     date: Optional[date] = None
-    duration_min: Optional[int] = None
+    duration_minutes: Optional[int] = None
     notes: Optional[str] = None
 
 
@@ -29,18 +29,20 @@ class WorkoutExerciseCreate(BaseModel):
 
 
 class SetLogCreate(BaseModel):
-    workout_ex_id: int
+    workout_exercise_id: int
     set_number: int
-    reps: Optional[int] = None
-    weight_lbs: Optional[float] = None
-    duration_sec: Optional[int] = None
+    reps: int 
+    weight_lbs: float
+    rpe: Optional[float] = None
+
 
 
 class SetLogUpdate(BaseModel):
     set_number: Optional[int] = None
     reps: Optional[int] = None
     weight_lbs: Optional[float] = None
-    duration_sec: Optional[int] = None
+    rpe: Optional[float] = None
+
 
 
 # ── Helper: PR auto-detection ─────────────────────────────────────────────────
@@ -59,22 +61,22 @@ def _check_and_insert_pr(cur, user_id: int, exercise_id: int, weight_lbs: float,
     if existing is None or weight_lbs > existing["weight_lbs"]:
         cur.execute(
             """
-            INSERT INTO personalrecord (user_id, exercise_id, weight_lbs, reps, achieved_date)
+            INSERT INTO personalrecord (user_id, exercise_id, weight_lbs, reps, achieved_on)
             VALUES (%s, %s, %s, %s, CURRENT_DATE)
             """,
             (user_id, exercise_id, weight_lbs, reps),
         )
 
 
-def _get_user_and_exercise_for_set(cur, workout_ex_id: int):
+def _get_user_and_exercise_for_set(cur, workout_exercise_id: int):
     cur.execute(
         """
         SELECT ws.user_id, we.exercise_id
         FROM workoutexercise we
         JOIN workoutsession ws ON ws.session_id = we.session_id
-        WHERE we.workout_ex_id = %s
+        WHERE we.workout_exercise_id = %s
         """,
-        (workout_ex_id,),
+        (workout_exercise_id,),
     )
     return cur.fetchone()
 
@@ -86,11 +88,11 @@ def create_session(payload: SessionCreate, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO workoutsession (user_id, date, duration_min, notes)
+            INSERT INTO workoutsession (user_id, date, duration_minutes, notes)
             VALUES (%s, %s, %s, %s)
             RETURNING *
             """,
-            (payload.user_id, payload.date, payload.duration_min, payload.notes),
+            (payload.user_id, payload.date, payload.duration_minutes, payload.notes),
         )
         conn.commit()
         return cur.fetchone()
@@ -126,8 +128,8 @@ def get_session_full(session_id: int, conn=Depends(get_db)):
 
         cur.execute(
             """
-            SELECT we.workout_ex_id, we.order_num,
-                   e.exercise_id, e.name, e.muscle_group, e.exercise_type
+            SELECT we.workout_exercise_id, we.order_num,
+                   e.exercise_id, e.name, e.muscle_group, e.equipment
             FROM workoutexercise we
             JOIN exercise e ON e.exercise_id = we.exercise_id
             WHERE we.session_id = %s
@@ -141,8 +143,8 @@ def get_session_full(session_id: int, conn=Depends(get_db)):
         result["exercises"] = []
         for ex in exercises:
             cur.execute(
-                "SELECT * FROM setlog WHERE workout_ex_id = %s ORDER BY set_number",
-                (ex["workout_ex_id"],),
+                "SELECT * FROM setlog WHERE workout_exercise_id = %s ORDER BY set_number",
+                (ex["workout_exercise_id"],),
             )
             sets = cur.fetchall()
             ex_dict = dict(ex)
@@ -155,7 +157,7 @@ def get_session_full(session_id: int, conn=Depends(get_db)):
 @router.put("/sessions/{session_id}")
 def update_session(session_id: int, payload: SessionUpdate, conn=Depends(get_db)):
     fields, values = [], []
-    for col, val in [("date", payload.date), ("duration_min", payload.duration_min), ("notes", payload.notes)]:
+    for col, val in [("date", payload.date), ("duration_minutes", payload.duration_minutes), ("notes", payload.notes)]:
         if val is not None:
             fields.append(f"{col} = %s")
             values.append(val)
@@ -205,7 +207,7 @@ def list_session_exercises(session_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT we.*, e.name, e.muscle_group, e.exercise_type
+            SELECT we.*, e.name, e.muscle_group, e.equipment
             FROM workoutexercise we
             JOIN exercise e ON e.exercise_id = we.exercise_id
             WHERE we.session_id = %s
@@ -216,12 +218,12 @@ def list_session_exercises(session_id: int, conn=Depends(get_db)):
         return cur.fetchall()
 
 
-@router.delete("/exercises-in-session/{workout_ex_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_exercise_from_session(workout_ex_id: int, conn=Depends(get_db)):
+@router.delete("/exercises-in-session/{workout_exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_exercise_from_session(workout_exercise_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
-            "DELETE FROM workoutexercise WHERE workout_ex_id = %s RETURNING workout_ex_id",
-            (workout_ex_id,),
+            "DELETE FROM workoutexercise WHERE workout_exercise_id = %s RETURNING workout_exercise_id",
+            (workout_exercise_id,),
         )
         conn.commit()
         if not cur.fetchone():
@@ -235,16 +237,16 @@ def log_set(payload: SetLogCreate, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO setlog (workout_ex_id, set_number, reps, weight_lbs, duration_sec)
+            INSERT INTO setlog (workout_exercise_id, set_number, reps, weight_lbs, rpe)
             VALUES (%s, %s, %s, %s, %s)
             RETURNING *
             """,
-            (payload.workout_ex_id, payload.set_number, payload.reps, payload.weight_lbs, payload.duration_sec),
+            (payload.workout_exercise_id, payload.set_number, payload.reps, payload.weight_lbs, payload.rpe),
         )
         new_set = cur.fetchone()
 
         if payload.weight_lbs and payload.reps:
-            context = _get_user_and_exercise_for_set(cur, payload.workout_ex_id)
+            context = _get_user_and_exercise_for_set(cur, payload.workout_exercise_id)
             if context:
                 _check_and_insert_pr(cur, context["user_id"], context["exercise_id"], payload.weight_lbs, payload.reps)
 
@@ -252,12 +254,12 @@ def log_set(payload: SetLogCreate, conn=Depends(get_db)):
         return new_set
 
 
-@router.get("/exercises-in-session/{workout_ex_id}/sets")
-def list_sets(workout_ex_id: int, conn=Depends(get_db)):
+@router.get("/exercises-in-session/{workout_exercise_id}/sets")
+def list_sets(workout_exercise_id: int, conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT * FROM setlog WHERE workout_ex_id = %s ORDER BY set_number",
-            (workout_ex_id,),
+            "SELECT * FROM setlog WHERE workout_exercise_id = %s ORDER BY set_number",
+            (workout_exercise_id,),
         )
         return cur.fetchall()
 
@@ -279,7 +281,7 @@ def update_set(set_id: int, payload: SetLogUpdate, conn=Depends(get_db)):
         ("set_number", payload.set_number),
         ("reps", payload.reps),
         ("weight_lbs", payload.weight_lbs),
-        ("duration_sec", payload.duration_sec),
+        ("rpe", payload.rpe),
     ]:
         if val is not None:
             fields.append(f"{col} = %s")
@@ -298,7 +300,7 @@ def update_set(set_id: int, payload: SetLogUpdate, conn=Depends(get_db)):
             raise HTTPException(status_code=404, detail="Set not found")
 
         if payload.weight_lbs and payload.reps:
-            context = _get_user_and_exercise_for_set(cur, updated["workout_ex_id"])
+            context = _get_user_and_exercise_for_set(cur, updated["workout_exercise_id"])
             if context:
                 _check_and_insert_pr(cur, context["user_id"], context["exercise_id"], updated["weight_lbs"], updated["reps"])
 

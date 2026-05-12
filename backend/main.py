@@ -9,7 +9,7 @@ load_dotenv()
 
 app = FastAPI(title="Gym & Wellness Tracker API", version="1.0.0")
 
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 app.add_middleware(
     CORSMiddleware,

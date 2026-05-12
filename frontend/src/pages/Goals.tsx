@@ -8,9 +8,9 @@ export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [goalType, setGoalType] = useState("");
+  const [exercise, setExercise] = useState("");
   const [target, setTarget] = useState("");
-  const [targetDate, setTargetDate] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,8 +27,8 @@ export default function Goals() {
     e.preventDefault();
     setSaving(true);
     try {
-      await createGoal({ user_id: userId, goal_type: goalType, target_value: Number(target), target_date: targetDate || undefined });
-      setGoalType(""); setTarget(""); setTargetDate("");
+      await createGoal({ user_id: userId, exercise, target_value: Number(target), deadline: deadline || undefined });
+      setExercise(""); setTarget(""); setDeadline("");
       setShowForm(false);
       load();
     } catch (err: unknown) {
@@ -39,8 +39,8 @@ export default function Goals() {
   }
 
   async function toggleComplete(goal: Goal) {
-    const updated = await updateGoal(goal.goal_id, { is_completed: !goal.is_completed });
-    setGoals((prev) => prev.map((g) => g.goal_id === goal.goal_id ? updated : g));
+    const updated = await updateGoal(goal.goal_id, { status: goal.status === "active" ? "completed" : "active",});
+    setGoals((prev) => prev.map((g) => (g.goal_id === goal.goal_id ? updated : g)));
   }
 
   async function handleDelete(goalId: number) {
@@ -49,8 +49,8 @@ export default function Goals() {
     setGoals((prev) => prev.filter((g) => g.goal_id !== goalId));
   }
 
-  const active = goals.filter((g) => !g.is_completed);
-  const completed = goals.filter((g) => g.is_completed);
+  const active = goals.filter((g) => g.status === "active");
+  const completed = goals.filter((g) => g.status === "completed");
 
   return (
     <div>
@@ -66,12 +66,12 @@ export default function Goals() {
       {showForm && (
         <form onSubmit={handleAdd} style={styles.formCard}>
           <h3 style={{ fontWeight: 600, marginBottom: 14 }}>New Goal</h3>
-          <label style={styles.label}>Goal Type *</label>
-          <input style={styles.input} value={goalType} onChange={(e) => setGoalType(e.target.value)} placeholder="e.g. Bench Press 1RM, Run 5K…" required />
+          <label style={styles.label}>Exercise *</label>
+          <input style={styles.input} value={exercise} onChange={(e) => setExercise(e.target.value)} placeholder="e.g. Bench Press, Run 5K…" required />
           <label style={styles.label}>Target Value *</label>
           <input style={styles.input} type="number" value={target} onChange={(e) => setTarget(e.target.value)} required />
-          <label style={styles.label}>Target Date</label>
-          <input style={styles.input} type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+          <label style={styles.label}>Deadline</label>
+          <input style={styles.input} type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
           <button style={styles.btnPrimary} type="submit" disabled={saving}>{saving ? "Saving…" : "Add Goal"}</button>
         </form>
       )}
@@ -95,14 +95,14 @@ export default function Goals() {
 }
 
 function GoalCard({ goal, onToggle, onDelete }: { goal: Goal; onToggle: (g: Goal) => void; onDelete: (id: number) => void }) {
-  const done = goal.is_completed;
+  const done = goal.status === "completed";
   return (
     <div style={{ ...styles.card, opacity: done ? 0.7 : 1 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <div style={{ fontWeight: 600, fontSize: 15, textDecoration: done ? "line-through" : "none" }}>{goal.goal_type}</div>
+          <div style={{ fontWeight: 600, fontSize: 15, textDecoration: done ? "line-through" : "none" }}>{goal.exercise}</div>
           <div style={styles.meta}>Target: {goal.target_value}</div>
-          {goal.target_date && <div style={styles.meta}>Target Date: {goal.target_date}</div>}
+          {goal.deadline && <div style={styles.meta}>Deadline: {goal.deadline}</div>}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button style={styles.btnGhost} onClick={() => onToggle(goal)}>
