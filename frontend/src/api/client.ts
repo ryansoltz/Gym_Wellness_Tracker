@@ -96,9 +96,11 @@ export const addExerciseToSession = (body: { session_id: number; exercise_id: nu
     body: JSON.stringify(body),
   });
 
-export const logSet = (body: { workout_exercise_id: number; set_number: number; weight_lbs: number; reps: number; rpe?: number }) =>
-  request<SetLog>("/workouts/sets", { method: "POST", body: JSON.stringify(body) });
-
+export const logSet = (body: {workout_exercise_id: number;set_number: number;weight_lbs: number;reps: number;rpe?: number}) =>
+  request<{ set: SetLog; new_pr: boolean }>("/workouts/sets", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 // ── Goals ────────────────────────────────────────────────────────────────────
 
 export interface Goal {

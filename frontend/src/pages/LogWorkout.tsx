@@ -66,24 +66,40 @@ export default function LogWorkout() {
         duration_minutes: duration ? Number(duration) : undefined,
         notes: notes || undefined,
       });
+
+      let newPrLogged = false;
+
       for (let order = 0; order < entries.length; order++) {
         const entry = entries[order];
+
         const { workout_exercise_id } = await addExerciseToSession({
           session_id: session.session_id,
           exercise_id: entry.exercise_id,
           order_num: order + 1,
         });
+
         for (let si = 0; si < entry.sets.length; si++) {
           const s = entry.sets[si];
+
           if (!s.weight || !s.reps) continue;
-          await logSet({
+
+          const result = await logSet({
             workout_exercise_id,
             set_number: si + 1,
             weight_lbs: Number(s.weight),
             reps: Number(s.reps),
           });
+
+          if (result.new_pr) {
+            newPrLogged = true;
+          }
         }
       }
+
+      if (newPrLogged) {
+        localStorage.setItem("new_pr_logged", "true");
+      }
+
       navigate("/history");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to save workout.");

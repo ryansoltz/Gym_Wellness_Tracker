@@ -8,12 +8,18 @@ export default function WorkoutHistory() {
   const [expanded, setExpanded] = useState<Record<number, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     listSessions(userId)
       .then(setSessions)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+
+    if (localStorage.getItem("new_pr_logged") === "true") {
+      setNotice("New personal record logged! 🏆");
+      localStorage.removeItem("new_pr_logged");
+    }
   }, [userId]);
 
   async function toggleExpand(sessionId: number) {
@@ -37,6 +43,8 @@ export default function WorkoutHistory() {
   return (
     <div>
       <h2 style={styles.heading}>Workout History</h2>
+
+      {notice && <div style={styles.success}>{notice}</div>}
       {sessions.length === 0 ? (
         <p style={{ color: "#6b7280" }}>No sessions yet. Go log a workout!</p>
       ) : (
@@ -97,4 +105,5 @@ const styles: Record<string, React.CSSProperties> = {
   exercise: { marginBottom: 10 },
   exName: { fontWeight: 600, fontSize: 14, marginBottom: 4 },
   setChip: { background: "#ede9fe", color: "#4f46e5", borderRadius: 6, padding: "3px 10px", fontSize: 13 },
+  success: { background: "#ecfdf5", border: "1px solid #86efac", color: "#166534", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 14,},
 };

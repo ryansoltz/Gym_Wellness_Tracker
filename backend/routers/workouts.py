@@ -58,6 +58,7 @@ def _check_and_insert_pr(cur, user_id: int, exercise_id: int, weight_lbs: float,
         (user_id, exercise_id),
     )
     existing = cur.fetchone()
+
     if existing is None or weight_lbs > existing["weight_lbs"]:
         cur.execute(
             """
@@ -66,6 +67,9 @@ def _check_and_insert_pr(cur, user_id: int, exercise_id: int, weight_lbs: float,
             """,
             (user_id, exercise_id, weight_lbs, reps),
         )
+        return True
+
+    return False
 
 
 def _get_user_and_exercise_for_set(cur, workout_exercise_id: int):
@@ -244,14 +248,21 @@ def log_set(payload: SetLogCreate, conn=Depends(get_db)):
             (payload.workout_exercise_id, payload.set_number, payload.reps, payload.weight_lbs, payload.rpe),
         )
         new_set = cur.fetchone()
+        new_pr = False
 
         if payload.weight_lbs and payload.reps:
             context = _get_user_and_exercise_for_set(cur, payload.workout_exercise_id)
             if context:
-                _check_and_insert_pr(cur, context["user_id"], context["exercise_id"], payload.weight_lbs, payload.reps)
+                new_pr = _check_and_insert_pr(
+                    cur,
+                    context["user_id"],
+                    context["exercise_id"],
+                    payload.weight_lbs,
+                    payload.reps,
+                )
 
         conn.commit()
-        return new_set
+        return {"set": new_set, "new_pr": new_pr}
 
 
 @router.get("/exercises-in-session/{workout_exercise_id}/sets")
