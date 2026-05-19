@@ -26,7 +26,7 @@ Built for CISC 450 — Database Design | University of St. Thomas
 - Wellness vs. performance correlation report
 - Workout summary dashboard
 
-## Getting Started
+## Installation Instructions
 
 ### Prerequisites
 - Node.js 18+
