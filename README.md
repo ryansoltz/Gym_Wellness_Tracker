@@ -27,6 +27,7 @@ The app can be used daily to do these things, and will remember user data even a
 
 ### 1. Clone the repo
 ```bash
+#Can use this code or can clone using your IDE
 git clone https://github.com/YOUR_USERNAME/gym-wellness-tracker.git
 cd gym-wellness-tracker
 ```
