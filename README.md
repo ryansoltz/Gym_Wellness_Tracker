@@ -3,16 +3,6 @@
 A full stack web app for tracking workouts, fitness goals, personal records, and daily wellness metrics. Written using React w/ Typescript for the frontend, Python for the backend, and a PostgreSQL database for storing data. Made for CISC 450 - Database Design. Developed by Joshua Mburu and Ryan Soltis
 
 
-## Features
-
-- Log workout sessions with exercises, sets, reps, and weight
-- Automatic personal record (PR) detection and tracking
-- Progress charts per exercise over time
-- Fitness goal creation and tracking
-- Daily body weight logging
-- Daily wellness check-ins (sleep, mood, energy, hydration)
-- Wellness vs. performance correlation report
-- Workout summary dashboard
 
 ## Usage Instructions
 
