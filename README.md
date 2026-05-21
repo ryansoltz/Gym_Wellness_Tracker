@@ -1,17 +1,7 @@
-# Gym & Wellness Tracker
+## Overview
 
-A full stack web app for tracking workouts, fitness goals, personal records, and daily wellness metrics. Written using React Made for CISC 450 - Database Design. Developed by Joshua Mburu and Ryan Soltis
+A full stack web app for tracking workouts, fitness goals, personal records, and daily wellness metrics. Written using React w/ Typescript for the frontend, Python for the backend, and a PostgreSQL database for storing data. Made for CISC 450 - Database Design. Developed by Joshua Mburu and Ryan Soltis
 
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | React + Vite + TypeScript |
-| Backend | FastAPI (Python) |
-| Database | Supabase (PostgreSQL) |
-| Frontend Hosting | Vercel |
-| Backend Hosting | Railway |
 
 ## Features
 
@@ -25,6 +15,17 @@ A full stack web app for tracking workouts, fitness goals, personal records, and
 - Workout summary dashboard
 
 ## Usage Instructions
+
+After successfully getting the webapp running and going to the local URL (after following the Installation Instructions), make an account/log in to the app. Once logged in, you are able to access the features of the app:
+- Log workout sessions with exercises, sets, reps, and weight
+- Track personal records automatically
+- Fitness goal creation and tracking
+- Body weight logging
+- Wellness logging (sleep, mood, energy, hydration)
+- Wellness vs. performance correlation report
+- Workout summary dashboard
+- Create/delete exercises
+The app can be used daily to do these things, and will remember user data even after logging out, so it is a good way to track your fitness/wellness over time.
 
 ## Installation Instructions
 
@@ -64,4 +65,4 @@ npm run dev
 ```
 App running at `http://localhost:5173`
 
-## Project Structure
+
