@@ -25,6 +25,7 @@ After successfully getting the webapp running and going to the local URL (after 
 - Wellness vs. performance correlation report
 - Workout summary dashboard
 - Create/delete exercises
+  
 The app can be used daily to do these things, and will remember user data even after logging out, so it is a good way to track your fitness/wellness over time.
 
 ## Installation Instructions
