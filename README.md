@@ -6,7 +6,7 @@ A full stack web app for tracking workouts, fitness goals, personal records, and
 
 ## Usage Instructions
 
-After successfully getting the webapp running and going to the local URL (after following the Installation Instructions), make an account/log in to the app. Once logged in, you are able to access the features of the app:
+After successfully getting the webapp running and going to the local URL (after following the Installation Instructions), make an account/log in to the app. Once logged in, you are able to access the features of the app by navigating to the different pages:
 - Log workout sessions with exercises, sets, reps, and weight
 - Track personal records automatically
 - Fitness goal creation and tracking
