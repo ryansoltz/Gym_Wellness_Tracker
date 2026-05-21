@@ -1,9 +1,7 @@
 # Gym & Wellness Tracker
 
-A full stack web app for tracking workouts, fitness goals, personal records, and daily wellness metrics.
+A full stack web app for tracking workouts, fitness goals, personal records, and daily wellness metrics. Made for CISC 450 - Database Design. Developed by Joshua Mburu and Ryan Soltis
 
-Built for CISC 450 — Database Design | University of St. Thomas
-**Joshua Mburu & Ryan Soltis**
 
 ## Tech Stack
 
@@ -25,6 +23,8 @@ Built for CISC 450 — Database Design | University of St. Thomas
 - Daily wellness check-ins (sleep, mood, energy, hydration)
 - Wellness vs. performance correlation report
 - Workout summary dashboard
+
+## Usage Instructions
 
 ## Installation Instructions
 
